@@ -1271,8 +1271,13 @@ bool HWC2On1Adapter::Display::hasChanges() const {
 
 Error HWC2On1Adapter::Display::set(hwc_display_contents_1& hwcContents) {
     std::unique_lock<std::recursive_mutex> lock(mStateMutex);
+    return set2(hwcContents, false);
+}
 
-    if (!mChanges || (mChanges->getNumTypes() > 0)) {
+Error HWC2On1Adapter::Display::set2(hwc_display_contents_1& hwcContents, bool prepare) {
+    std::unique_lock<std::recursive_mutex> lock(mStateMutex);
+
+    if (!prepare && (!mChanges || (mChanges->getNumTypes() > 0))) {
         ALOGE("[%" PRIu64 "] set failed: not validated", mId);
         return Error::NotValidated;
     }
@@ -2368,6 +2373,24 @@ bool HWC2On1Adapter::prepareAllDisplays() {
         for (size_t l = 0; l < displayContents->numHwLayers; ++l) {
             auto& layer = displayContents->hwLayers[l];
             ALOGV("  %zd: %d", l, layer.compositionType);
+        }
+    }
+
+    // workaround for fix no display, copy from setAllDisplays()
+    {
+        // Make sure we're ready to validate
+        for (size_t hwc1Id = 0; hwc1Id < mHwc1Contents.size(); ++hwc1Id) {
+            if (mHwc1Contents[hwc1Id] == nullptr) {
+                continue;
+            }
+
+            auto displayId = mHwc1DisplayMap[hwc1Id];
+            auto& display = mDisplays[displayId];
+            Error error = display->set2(*mHwc1Contents[hwc1Id], true);
+            if (error != Error::None) {
+                ALOGE("setAllDisplays: Failed to set display %zd: %s", hwc1Id,
+                        to_string(error).c_str());
+            }
         }
     }
 
