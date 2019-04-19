@@ -264,7 +264,6 @@ private:
 
             bool hasChanges() const;
             HWC2::Error set(hwc_display_contents_1& hwcContents);
-            HWC2::Error set2(hwc_display_contents_1& hwcContents, bool prepare);
             void addRetireFence(int fenceFd);
             void addReleaseFences(const hwc_display_contents_1& hwcContents);
 
